@@ -2,11 +2,11 @@
 
 CCCC  type = 1 (radiated inclusive inelastics), 2 (radiated elastics), 3 (radiated QE),
 CCCC  type = 1, tagged = 1 (radiated neutron + recoil proton from e-d, BONuS process)
-      
+      use cl_option
       implicit  none
 
       real*8 e,ep,theta,epmin,epmax,tmin,tmax,sig,rc,mp,mp2,eel
-      real*8 thetap,q2,w2,nu,nuel,sin2,qv,pp,cosp,radcon/57.2958/
+      real*8 thetap,q2,w2,nu,nuel,q2el,sin2,qv,pp,cosp,radcon/57.2958/
       real*8 lx,ly,lz,px,py,pz,phi,vx,vy,vz,ran3,lt/-1.0/
       real*8 me/0.000511/,epro,sigint,t1,testp,phip,gamma,pT,yd
       real*8 pgz,costhpq,qx,qy,qz,phiq,pphi,cospphi,sinpphi,pxy,pgzc
@@ -17,21 +17,34 @@ CCCC  type = 1, tagged = 1 (radiated neutron + recoil proton from e-d, BONuS pro
       logical first/.true./,firstr/.true./,check/.true./
       character*40 outfile
       external ran3
+      integer*4 numOptions
+      real*8 tempDump, p2, bjorkenX, gamma2, theta_pq
+      real*8 y0, y_test
 
       MD = 2*mN + epsD          !!! deuteron mass in MeV/c     
-
-      read(5,*) seed, outfile
+      numOptions = iargc()
+      call read_commandPara(numOptions)
+      seed = cl_seed 
+      outfile = cl_outfile
+      nevents = cl_numEvents
+      write(*,*) "Input parameter: ", seed, outfile
+c      read(5,*) seed, outfile
 
       open(unit=26,file=outfile,status='new')
-c      open(unit=29,file='check.dat' ,status='new')
+      open(unit=29,file='junk.dat', action='write', status='replace')
+      write(29, *) "e   e'   q2   nu    w2   xb  yD  pT   p  theta_pq"
+      open(unit=27,file='chkPT3.dat', action='write', status='replace')
+      write(27, *) "In sampproton.f:  norm  test  gamma   yD   pT   fyt
+     &   fyint"
       
 c      seed = -180081277
-      nevents = 200000
+c      nevents = 5
       
-      type = 1                  !!! radiated inelastics
+      type = cl_type                  !!! radiated inelastics
+c      type = 1                  !!! radiated inelastics
 c       type = 2                  !!! radiated elastics
-c      tagged = 1
-       tagged = 0
+      tagged = 1
+c       tagged = 0
        
 
 CCCC      First define generation phase space   CCCC
@@ -77,9 +90,16 @@ c       write(6,*) i,"test2"
        sin2 = sin2*sin2
        q2 = 4*e*ep*sin2
        nu = e-ep
-       w2 = mp2 + 2*mp*nu-q2
+       w2 = mp2 + 2*mp*nu-q2 !// only for scattered proton? may not correct for the deuteron.
        
-       gamma = sqrt(1.0+nu*nu/q2)
+       gamma = sqrt(1.0+q2/(nu*nu))
+       bjorkenX = q2/(2.0*MD*nu/1000.0)
+c       gamma2 = sqrt(1 + 4*bjorkenX*bjorkenX*MD*MD/1000000.0/q2)
+       gamma2 = sqrt(1.0+q2/nu/nu)
+       write(*,*) gamma, gamma2, gamma-gamma2
+       if (gamma2 .lt. 1.0) then
+          write(*,*) "gamma is less than 1"
+       endif
 
 c       write(6,*) "test2",nu,q2,gamma
        
@@ -91,7 +111,7 @@ CCCC  Next get components of photon q vector  CCCC
        
        qx = -1.0D0*lx
        qy = -1.0D0*ly
-       qv = sqrt(q2+nu*nu) 
+       qv = sqrt(q2+nu*nu) !// qv = qx^2+qy^2+qz^2
        qz = e - lz                          !!!  looks correct to here.
        phiq = phi-180.D0
        cosqz = qz/qv
@@ -101,21 +121,43 @@ CCCC  Next get components of photon q vector  CCCC
 c       phiq = 180.0/pi*acos(qx/sqrt(qx*qx+qy*qy))
 
 c       write(6,*) "check:  ", phiq+180.0, phi
-       
+       pp = 0.0
+       p2 = 0.0
        if(type.EQ.2) then
-         eel = mp*ep/(mp-2.0*ep*sin2)
+         eel = mp*ep/(mp-2.0*ep*sin2) 
          nuel = eel-ep
-         pp = sqrt(nuel*nuel+q2) 
+         q2el = 4.0*eel*ep*sin2
+         pp = sqrt(nuel*nuel+q2el)!sqrt(nuel*nuel+q2) 
          px = qx
          py = qy
          pz = eel-lz
+         p2 = sqrt(px*px+py*py+pz*pz)
          thetap = radcon*acos(pz/sqrt(pz*pz+px*px+py*py))
+         tempDump = abs(pp - p2)
+         write (6,*) "type ", type, ": pp = ", pp,
+     &      " p2 = ", p2, " diff p = ", tempDump
+c         write (29,*) pp, p2, tempDump
        elseif(type.EQ.1) then  
-         thetap = 180*ran3(seed) !!! For now assume uniform distribution  !!!
+c         thetap = 180*ran3(seed) !!! For now assume uniform distribution  !!!
                                   !!!  need to put in a reasonable proton momentum distribution sampling
+ccc      toy theta distribution 1 + cos^2(x) -0.5sin^2(2x)
+c         y0 = 0.0
+c         y_test = 1.0
+c         do while(y_test .GT. y0)
+c            thetap = 180*ran3(seed) 
+c            y0 = (1.0 + cos(thetap/radcon)*cos(thetap/radcon) 
+c     &            - 0.4*sin(2.0*thetap/radcon)*sin(2.0*thetap/radcon))/2.0
+c            y0 = (1.0 + cos(thetap/radcon)*cos(thetap/radcon))/2.0
+c            y_test = ran3(seed)
+c            y0 = 1.1
+c         enddo
+c         if (thetap .GT. 85.0 .AND. thetap .LT.95.0) then
+c            write(*, *) "accept y0 = ", y0, " y_test = ", y_test
+c         endif
+ccc      toy theta distribution 
          check = .true.
          do while(check)
-           pp = 0.01+0.4*ran3(seed)   !!! generate only between 1-400 MeV/c  !!!
+           pp = 0.01+(0.4-0.01)*ran3(seed)   !!! generate only between 1-400 MeV/c  !!!
            testp = 0.01/pp            !!! pretend propability distribution   !!!         
            if(pp.LE.testp) check = .false. 
          enddo
@@ -126,8 +168,8 @@ c       write(6,*) "check:  ", phiq+180.0, phi
        endif
 
        if(type.EQ.1.AND.tagged.EQ.1) then
-c         write(6,*) "test3"
           call sampproton(gamma,yd,pT)  !!!  pT returned in MeV/c.  Component perpendicular to photon direction  !!!
+c          write(*, *) "yd = ", yD, " pT = ", pT
          IF (gamma.GT.1.D0) THEN
 	   pgz = ( DSQRT( (1.D0-yD)**2*MD**2              !!! Component of proton momentum along photon direction  !!!
      &           + (gamma**2-1.D0)*(pT**2 + mN**2) )
@@ -137,7 +179,7 @@ c         write(6,*) "test3"
            pgz = (pT**2 + mN**2 - (1.D0-yD)**2*MD**2) / (2*(1.D0-yD)*MD)
          ENDIF
         
-         pp = sqrt(pT*pT+pgz*pgz)         !!! total proton momentum
+         pp = sqrt(pT*pT+pgz*pgz)         !!! total proton momentum in MeV/c
          costhpq = pgz/pp                !!! cosine of angle between proton and qvec  !!!
 
          pphi = 360.0*ran3(seed) !!! angle between pT and x-y plane, rotating about qv 
@@ -155,6 +197,11 @@ c         write(6,*) "test  ", pphi,cospphi
          
 c         px = pxy*cospphi                  !!! proton momentum along x-axis
 c         py = sqrt(pp*pp-px*px-pz*pz)      !!! proton momentum along y-axiy
+
+         px = px/1000.0           !!!  put in GeV/c
+         py = py/1000.0
+         pz = pz/1000.0
+         pp = pp/1000.0   
          
          pgzc = px*qx/qv+py*qy/qv+pz*qz/qv  !!! check of proton momentum along qv
          
@@ -172,8 +219,18 @@ c         write(6,1003) e,ep,theta,pgz,pgzc,pp,pxy,pz,sqrt(px*px+py*py)
 
        write(26,1001) two,-1.0*lt,one,pidp,zero,zero,
      &      px,py,pz,epro,mp,vx,vy,vz
+c       write(6,*) "writeInFile",-1.0*lt,one,pidp,zero,zero,
+c     &      px,py,pz,epro,mp,vx,vy,vz
 
 c       write(29,*) e,ep,theta,thetap,pp
+
+c       *****check*****         
+       p2 = sqrt(px*px + py*py + pz*pz)
+       tempDump = (px*qx + py*qy + pz*qz)/(p2*qv)
+       theta_pq = (180.0/pi)*acos(tempDump)
+       write(*,*) theta_pq, px, py, pz
+
+          write(29, *) e, ep, q2, nu, w2, bjorkenX, yD, pT, p2, theta_pq
        
 c       write(6,*) sig
        
