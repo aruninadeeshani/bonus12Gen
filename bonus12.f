@@ -138,23 +138,8 @@ c       write(6,*) "check:  ", phiq+180.0, phi
      &      " p2 = ", p2, " diff p = ", tempDump
 c         write (29,*) pp, p2, tempDump
        elseif(type.EQ.1) then  
-c         thetap = 180*ran3(seed) !!! For now assume uniform distribution  !!!
+         thetap = 180*ran3(seed) !!! For now assume uniform distribution  !!!
                                   !!!  need to put in a reasonable proton momentum distribution sampling
-ccc      toy theta distribution 1 + cos^2(x) -0.5sin^2(2x)
-c         y0 = 0.0
-c         y_test = 1.0
-c         do while(y_test .GT. y0)
-c            thetap = 180*ran3(seed) 
-c            y0 = (1.0 + cos(thetap/radcon)*cos(thetap/radcon) 
-c     &            - 0.4*sin(2.0*thetap/radcon)*sin(2.0*thetap/radcon))/2.0
-c            y0 = (1.0 + cos(thetap/radcon)*cos(thetap/radcon))/2.0
-c            y_test = ran3(seed)
-c            y0 = 1.1
-c         enddo
-c         if (thetap .GT. 85.0 .AND. thetap .LT.95.0) then
-c            write(*, *) "accept y0 = ", y0, " y_test = ", y_test
-c         endif
-ccc      toy theta distribution 
          check = .true.
          do while(check)
            pp = 0.01+(0.4-0.01)*ran3(seed)   !!! generate only between 1-400 MeV/c  !!!

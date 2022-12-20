@@ -8,8 +8,7 @@
       INTEGER wfn,ibar,imom,rel,i,j,seed/84389723/
       logical firstr
       external ran3
-      integer*4 numCount, idx, jdx
-      real*8 gammaConst1/1.5/
+      integer*4 numCount
       
 CCCC  By default use WBArelativistic prescription with CDBONN potential  CCCC      
       
@@ -40,6 +39,7 @@ c      write(6,*) "Here - sampproton"
     
       call dn(wfn,ibar,rel,yd,gamma,pT,FYINT,FYOFF)
       norm = FYINT(3)*pT
+      fyt = 0.0
       
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       dowhile(fyt.LT.test)
