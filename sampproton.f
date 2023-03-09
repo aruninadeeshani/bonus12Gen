@@ -34,18 +34,20 @@ c      write(6,*) "Here - sampproton"
       pTmax = 1000.0
       pTmin = 1.0
       numCount = 0
-      pT = 26.0
+c     pT = 26.0
       yd = 0.5
     
       call dn(wfn,ibar,rel,yd,gamma,pT,FYINT,FYOFF)
       norm = FYINT(3)*pT
       fyt = 0.0
-      
+      test = ran3(seed)
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       dowhile(fyt.LT.test)
-        test = ran3(seed)
-        yd = 5.0E-4+(5.0-1.0E-4)*ran3(seed)
-        pT = pTmin+(pTmax-pTmin)*ran3(seed)
+       yd = 1.0*ran3(seed)
+       pT = pTmax*ran3(seed)
+c      test = ran3(seed)
+c      yd = 5.0E-4+(5.0-1.0E-4)*ran3(seed)
+c      pT = pTmin+(pTmax-pTmin)*ran3(seed)
         call dn(wfn,ibar,rel,yd,gamma,pT,FYINT,FYOFF)
         fyt = (FYINT(3)*pT)/norm
 c       write(*,*) numCount, (FYINT(3)*pT), norm, test, fyt
